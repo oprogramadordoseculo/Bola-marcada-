@@ -1,6 +1,6 @@
 // Service worker — 15 Pontos
 // Troque a VERSAO sempre que publicar mudanças no app, para os celulares pegarem a nova versão.
-const VERSAO = "v2";
+const VERSAO = "v3";
 const CACHE = "15pontos-" + VERSAO;
 const BASICO = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 

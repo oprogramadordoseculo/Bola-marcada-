@@ -46,6 +46,7 @@ input,textarea{font-family:inherit;outline:none}
 .btn{width:100%;padding:13px 16px;border-radius:var(--r);font-size:14px;font-weight:700;color:#fff;margin-bottom:8px;display:flex;align-items:center;gap:8px;transition:opacity .2s,transform .1s;letter-spacing:.3px}
 .btn:active{transform:scale(.98);opacity:.85}
 .btn:disabled{opacity:.4;pointer-events:none}
+.btn.bloq{opacity:.4}
 .btn-verde{background:linear-gradient(135deg,var(--verde2),var(--verde3))}
 .btn-ouro{background:linear-gradient(135deg,#8a6400,var(--ouro))}
 .btn-roxo{background:linear-gradient(135deg,var(--roxo),#7a2aaa)}
@@ -177,19 +178,19 @@ input,textarea{font-family:inherit;outline:none}
         <div id="lf-st" class="aviso ai" style="display:none"></div>
         <div id="lf-lim" style="font-size:12px;color:var(--cinza4);margin-bottom:8px"></div>
         <button class="btn btn-verde" onclick="baixarLF()">&#11015;  Baixar historico e analisar</button>
-        <button id="b-lf-g" class="btn btn-azul" onclick="gerarC()" disabled>&#127922;  Gerar 10 combinacoes</button>
+        <button id="b-lf-g" class="btn btn-azul bloq" onclick="gerarC()">&#127922;  Gerar 10 combinacoes</button>
       </div>
       <div class="secao">
         <div class="stit">&#11088; Funcoes Premium</div>
-        <button id="b-todos" class="btn btn-roxo btn-sm" onclick="gTodos()" disabled>&#128290;  Todos os padroes (1 combo/padrao)</button>
-        <button id="b-pad" class="btn btn-roxo btn-sm" onclick="gPads()" disabled>&#128208;  3 padroes — 30 combinacoes</button>
-        <button id="b-14" class="btn btn-lar btn-sm" onclick="gPts(14)" disabled>&#127919;  Padroes 14 pts — 30 combos</button>
-        <button id="b-13" class="btn btn-lar btn-sm" onclick="gPts(13)" disabled>&#127919;  Padroes 13 pts — 30 combos</button>
-        <button id="b-12" class="btn btn-lar btn-sm" onclick="gPts(12)" disabled>&#127919;  Padroes 12 pts — 30 combos</button>
-        <button id="b-11" class="btn btn-lar btn-sm" onclick="gPts(11)" disabled>&#127919;  Padroes 11 pts — 30 combos</button>
-        <button id="b-16" class="btn btn-azul btn-sm" onclick="g16()" disabled>&#128308;  16 numeros — 30 combos</button>
-        <button id="b-fech" class="btn btn-azul btn-sm" onclick="gFech()" disabled>&#128274;  Fechamento matematico</button>
-        <button id="b-orc-lf" class="btn btn-ouro btn-sm" onclick="abrirOrc('lf')" disabled>&#128176;  Por orcamento</button>
+        <button id="b-todos" class="btn btn-roxo btn-sm bloq" onclick="gTodos()">&#128290;  Todos os padroes (1 combo/padrao)</button>
+        <button id="b-pad" class="btn btn-roxo btn-sm bloq" onclick="gPads()">&#128208;  3 padroes — 30 combinacoes</button>
+        <button id="b-14" class="btn btn-lar btn-sm bloq" onclick="gPts(14)">&#127919;  Padroes 14 pts — 30 combos</button>
+        <button id="b-13" class="btn btn-lar btn-sm bloq" onclick="gPts(13)">&#127919;  Padroes 13 pts — 30 combos</button>
+        <button id="b-12" class="btn btn-lar btn-sm bloq" onclick="gPts(12)">&#127919;  Padroes 12 pts — 30 combos</button>
+        <button id="b-11" class="btn btn-lar btn-sm bloq" onclick="gPts(11)">&#127919;  Padroes 11 pts — 30 combos</button>
+        <button id="b-16" class="btn btn-azul btn-sm bloq" onclick="g16()">&#128308;  16 numeros — 30 combos</button>
+        <button id="b-fech" class="btn btn-azul btn-sm bloq" onclick="gFech()">&#128274;  Fechamento matematico</button>
+        <button id="b-orc-lf" class="btn btn-ouro btn-sm bloq" onclick="abrirOrc('lf')">&#128176;  Por orcamento</button>
         <button class="btn btn-cin btn-sm" onclick="irT('t-conta')">&#128081;  Ver planos Premium</button>
       </div>
       <div id="lf-res" class="secao" style="display:none">
@@ -208,7 +209,7 @@ input,textarea{font-family:inherit;outline:none}
         <div class="stit">&#128176; Mega-Sena</div>
         <div id="mega-st" class="aviso ai" style="display:none"></div>
         <button class="btn btn-verde" onclick="baixarMega()">&#11015;  Baixar historico da Mega-Sena</button>
-        <button id="b-mega-o" class="btn btn-ouro btn-sm" onclick="abrirOrc('mega')" disabled>&#128176;  Gerar por orcamento</button>
+        <button id="b-mega-o" class="btn btn-ouro btn-sm bloq" onclick="abrirOrc('mega')">&#128176;  Gerar por orcamento</button>
       </div>
       <div id="mega-res" class="secao" style="display:none">
         <div class="stit">&#127919; Resultado</div>
@@ -226,8 +227,8 @@ input,textarea{font-family:inherit;outline:none}
         <div class="stit">&#127921; Dupla Sena</div>
         <div id="dupla-st" class="aviso ai" style="display:none"></div>
         <button class="btn btn-verde" onclick="baixarDupla()">&#11015;  Baixar historico da Dupla Sena</button>
-        <button id="b-dupla-o" class="btn btn-ouro btn-sm" onclick="abrirOrc('dupla')" disabled>&#128176;  Gerar por orcamento (6 dezenas)</button>
-        <button id="b-dupla-8" class="btn btn-lar btn-sm" onclick="g8Dupla()" disabled>&#127921;  12 combinacoes de 8 dezenas</button>
+        <button id="b-dupla-o" class="btn btn-ouro btn-sm bloq" onclick="abrirOrc('dupla')">&#128176;  Gerar por orcamento (6 dezenas)</button>
+        <button id="b-dupla-8" class="btn btn-lar btn-sm bloq" onclick="g8Dupla()">&#127921;  12 combinacoes de 8 dezenas</button>
       </div>
       <div id="dupla-res" class="secao" style="display:none">
         <div class="stit">&#127919; Resultado</div>
@@ -454,7 +455,7 @@ function hoje(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth(
 // O usuario so pode gravar estes campos (as regras do Firestore bloqueiam o resto).
 async function saveUD(){if(!u)return;try{await setDoc(doc(db,"usuarios",u.uid),{geracoesHoje:ud.geracoesHoje||0,dataHoje:ud.dataHoje||"",email:u.email||""},{merge:true});}catch(e){console.warn(e);}}
 const premAte=()=>ud.premiumAte&&ud.premiumAte.toDate?ud.premiumAte.toDate():null;
-const isPrem=()=>{if(ud.premium!==true)return false;const a=premAte();return !a||a>new Date();};
+const isPrem=()=>{if(_admin)return true;if(ud.premium!==true)return false;const a=premAte();return !a||a>new Date();};
 const podGer=()=>isPrem()||(ud.geracoesHoje||0)<LIM_G;
 const gerRest=()=>isPrem()?999:Math.max(0,LIM_G-(ud.geracoesHoje||0));
 async function regGer(){if(isPrem())return;ud.geracoesHoje=(ud.geracoesHoje||0)+1;await saveUD();}
@@ -750,7 +751,7 @@ window.baixarMega=async()=>{
     else{dl=Object.entries(dados).sort((a,b)=>Number(b[0])-Number(a[0])).filter(([,v])=>Array.isArray(v)&&v.length===6).map(([,v])=>v.map(Number));}
     anMega={dl,total:dl.length};
     setS("mega","✓ "+dl.length+" concursos da Mega-Sena carregados.","i");
-    _id("b-mega-o").disabled=false;
+    bloq(_id("b-mega-o"),false);
   }catch(e){setS("mega","Erro: "+e.message,"e");}
 };
 window.baixarDupla=async()=>{
@@ -761,38 +762,43 @@ window.baixarDupla=async()=>{
     const{d1,d2}=sepDupla(itens);
     anDupla={d1,d2,total:d1.length};
     setS("dupla","✓ "+d1.length+" concursos da Dupla Sena carregados.","i");
-    _id("b-dupla-o").disabled=false;_id("b-dupla-8").disabled=false;
+    bloq(_id("b-dupla-o"),false);bloq(_id("b-dupla-8"),false);
   }catch(e){setS("dupla","Erro: "+e.message,"e");}
 };
 
 // ── GERACOES LF ──
+function precisaLF(prem){
+  if(!anLF){toast("Primeiro toque em \"Baixar historico e analisar\".");return false;}
+  if(prem&&!isPrem()){toast("Funcao Premium. Veja os planos na aba Conta.");irT("t-conta");return false;}
+  return true;
+}
 window.gerarC=async()=>{
-  if(!anLF){toast("Baixe o historico primeiro.");return;}
+  if(!precisaLF(false))return;
   if(!podGer()){toast("Limite diario atingido! Faca upgrade Premium.");irT("t-conta");return;}
   const combos=gerarLF(anLF,10);await regGer();
   ultRes={tipo:"10 Combinacoes",combos,lot:"lf"};showResLF(combos,"10 Novas Combinacoes");updUI();
 };
 window.gTodos=async()=>{
-  if(!anLF||!isPrem()){toast("Necessario Premium e historico.");return;}
+  if(!precisaLF(true))return;
   const todos=todPad(anLF);const combos=[];
   for(const p of todos){const c=gerarLF(anLF,1,p.chave,p.valor);if(c.length)combos.push(c[0]);}
   ultRes={tipo:"Todos os Padroes",combos,lot:"lf"};showResLF(combos,"Todos os Padroes (1 combo/padrao)");
 };
 window.gPads=async()=>{
-  if(!anLF||!isPrem()){toast("Necessario Premium e historico.");return;}
+  if(!precisaLF(true))return;
   const pads=padLF(anLF,3);const combos=[];
   for(const p of pads)combos.push(...gerarLF(anLF,10,p.chave,p.valor));
   ultRes={tipo:"3 Padroes 30 Combos",combos,lot:"lf"};showResLF(combos,"3 Padroes — 30 Combinacoes");
 };
 window.gPts=async(mp)=>{
-  if(!anLF||!isPrem()){toast("Necessario Premium e historico.");return;}
+  if(!precisaLF(true))return;
   const pads=padPts(anLF,mp);
   if(!pads.length){toast("Nenhum padrao para "+mp+" pts.");return;}
   const combos=[];for(const p of pads)combos.push(...gerarLF(anLF,10,p.chave,p.valor));
   ultRes={tipo:"Padroes "+mp+" Pts",combos,lot:"lf"};showResLF(combos,"Padroes "+mp+" Pontos — 30 Combinacoes");
 };
 window.g16=async()=>{
-  if(!anLF||!isPrem()){toast("Necessario Premium e historico.");return;}
+  if(!precisaLF(true))return;
   const{q,fr}=quentes(anLF.dl);
   const uni=rng(1,26),pesos=uni.map(n=>q.has(n)?3.0:fr.has(n)?0.6:1.5);
   const cands=[],vis=new Set();let t=0;
@@ -802,7 +808,7 @@ window.g16=async()=>{
   ultRes={tipo:"16 Numeros 30 Combos",combos,lot:"lf"};showResLF(combos,"16 Numeros — 30 Combinacoes");
 };
 window.gFech=async()=>{
-  if(!anLF||!isPrem()){toast("Necessario Premium e historico.");return;}
+  if(!precisaLF(true))return;
   const{q,fr}=quentes(anLF.dl);
   const pesos=rng(1,26).map(n=>q.has(n)?3.0:fr.has(n)?0.6:1.5);
   const combos=gerarLF(anLF,10);
@@ -946,14 +952,14 @@ window.limparH=async()=>{
 
 // ── UI ──
 function setS(id,msg,t){const el=_id(id+"-st");if(!el)return;el.style.display=msg?"block":"none";el.className="aviso "+(t==="e"?"ae":"ai");el.textContent=msg;}
-function disaBtsLF(){["b-lf-g","b-todos","b-pad","b-14","b-13","b-12","b-11","b-16","b-fech","b-orc-lf"].forEach(i=>{const b=_id(i);if(b)b.disabled=true;});}
+function disaBtsLF(){["b-lf-g","b-todos","b-pad","b-14","b-13","b-12","b-11","b-16","b-fech","b-orc-lf"].forEach(i=>{const b=_id(i);if(b)bloq(b,true);});}
 function updUI(){
   const pm=isPrem(),df=anLF!==null,rt=gerRest();
   const bd=_id("badge-status");bd.textContent=pm?"PREMIUM":"GRATIS";bd.className="badge-status"+(pm?" premium":"");
   const lm=_id("lf-lim");if(lm)lm.textContent=pm?"Geracao ilimitada":`Hoje: ${LIM_G-rt} de ${LIM_G} (${rt} restantes)`;
   const bn=_id("ban-lf");if(bn)bn.classList.toggle("hide",pm);
-  const bg=_id("b-lf-g");if(bg)bg.disabled=!df||(!podGer()&&!pm);
-  ["b-todos","b-pad","b-14","b-13","b-12","b-11","b-16","b-fech","b-orc-lf"].forEach(i=>{const b=_id(i);if(b)b.disabled=!(pm&&df);});
+  const bg=_id("b-lf-g");if(bg)bloq(bg,!df||(!podGer()&&!pm));
+  ["b-todos","b-pad","b-14","b-13","b-12","b-11","b-16","b-fech","b-orc-lf"].forEach(i=>{const b=_id(i);if(b)bloq(b,!(pm&&df));});
   if(u){
     const ce=_id("c-email");if(ce)ce.textContent=u.email;
     const ate=premAte();
@@ -984,6 +990,7 @@ window.abrirWA=()=>{window.open(`https://wa.me/${WA}?text=Ola!%20Quero%20ativar%
 window.abrirWAB=()=>{window.open(`https://wa.me/${WA}?text=Ola!%20Quero%20participar%20do%20bolao%20da%20Lotofacil.`,"_blank");};
 window.toast=msg=>{const t=_id("toast");t.textContent=msg;t.classList.add("vis");setTimeout(()=>t.classList.remove("vis"),2800);};
 function _id(id){return document.getElementById(id);}
+function bloq(b,v){if(!b)return;b.classList.toggle("bloq",!!v);b.setAttribute("aria-disabled",v?"true":"false");}
 function _v(id){return _id(id).value.trim();}
 updUI();
 </script>
