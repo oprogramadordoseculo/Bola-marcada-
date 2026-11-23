@@ -1,0 +1,62 @@
+rules_version = '2';
+
+// Regras do Firestore — 15 Pontos / Bola Marcada
+// Cole este conteúdo em: Firebase Console > Firestore Database > Regras > Publicar
+//
+// Quem é admin: crie manualmente o documento  admins/{SEU_UID}  (pode ser vazio)
+// no Firebase Console. O UID aparece em Authentication > Users.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function logado() { return request.auth != null; }
+    function dono(uid) { return logado() && request.auth.uid == uid; }
+    function admin() {
+      return logado() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Lista de administradores: só leitura do próprio doc (para o app saber se mostra o painel).
+    // Ninguém cria/edita pelo app — só pelo Console.
+    match /admins/{uid} {
+      allow read: if dono(uid);
+      allow write: if false;
+    }
+
+    // Dados do usuário. O próprio usuário NÃO pode se tornar Premium.
+    match /usuarios/{uid} {
+      allow get: if dono(uid) || admin();
+      allow list: if admin();
+
+      allow create: if dono(uid)
+        && request.resource.data.premium == false
+        && !('premiumAte' in request.resource.data);
+
+      allow update: if admin()
+        || (dono(uid) && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['geracoesHoje', 'dataHoje', 'email']));
+
+      allow delete: if admin();
+    }
+
+    // Pedido de ativação do Premium (o usuário avisa que pagou; o admin aprova).
+    match /pedidos/{uid} {
+      allow get: if dono(uid) || admin();
+      allow list: if admin();
+      allow create, update: if admin()
+        || (dono(uid)
+            && request.resource.data.status == 'pendente'
+            && request.resource.data.uid == uid);
+      allow delete: if admin();
+    }
+
+    // Jogos salvos — cada um só mexe nos seus.
+    match /combinacoes/{uid}/jogos/{jogo} {
+      allow read, write: if dono(uid);
+    }
+
+    // Todo o resto fica fechado (inclui a antiga coleção codigos_usados).
+    match /{caminho=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -271,15 +271,22 @@ input,textarea{font-family:inherit;outline:none}
           <div class="pdesc">Geracao ilimitada + todas as funcoes</div>
         </div>
         <div class="aviso ao">Funcoes: Todos os Padroes, Fechamento Matematico, Orcamento, 14/13/12/11 Pts, 16 Numeros, Salvar no banco</div>
-        <div class="ilabel">Codigo de ativacao (recebido apos pagamento via PIX)</div>
-        <input type="text" id="cod-pix" class="icampo" placeholder="PREM-XXXXXXXX" style="text-transform:uppercase">
-        <button class="btn btn-ouro" onclick="ativarCod()">&#128273;  Ativar codigo</button>
-        <div class="sep"></div>
         <div class="stit">PIX — Pagamento</div>
-        <div style="font-size:13px;color:#fff;margin-bottom:8px">Envie R$ 19,90 via PIX e receba um codigo pelo WhatsApp em ate 30 minutos.</div>
+        <div style="font-size:13px;color:#fff;margin-bottom:8px">1. Envie R$ 19,90 via PIX.<br>2. Toque em <b>"Ja paguei"</b> abaixo.<br>3. Assim que o pagamento for confirmado, seu Premium e liberado automaticamente por 30 dias.</div>
         <button class="btn btn-verde btn-sm" onclick="copiarPix()">&#128203;  Copiar chave PIX</button>
-        <button class="btn btn-cin btn-sm" onclick="abrirWA()">&#128172;  Falar no WhatsApp</button>
         <div id="pix-ok" style="display:none" class="aviso ai">&#10003; Chave PIX copiada!</div>
+        <button class="btn btn-ouro" id="b-pedido" onclick="solicitarAtivacao()">&#9989;  Ja paguei — solicitar ativacao</button>
+        <div id="pedido-st" class="aviso ai" style="display:none"></div>
+        <button class="btn btn-cin btn-sm" onclick="abrirWA()">&#128172;  Falar no WhatsApp</button>
+      </div>
+      <div class="secao" id="adm-sec" style="display:none">
+        <div class="stit">&#128736; Painel do administrador</div>
+        <button class="btn btn-cin btn-sm" onclick="admCarregar()">&#128260;  Ver pedidos pendentes</button>
+        <div id="adm-lista" style="margin-top:8px"></div>
+        <div class="sep"></div>
+        <div class="ilabel">Ativar Premium por e-mail (30 dias)</div>
+        <input type="email" id="adm-email" class="icampo" placeholder="email@exemplo.com">
+        <button class="btn btn-ouro btn-sm" onclick="admAtivarEmail()">&#128081;  Ativar 30 dias</button>
       </div>
       <div class="secao">
         <div class="stit">&#128101; Bolao</div>
@@ -341,7 +348,7 @@ input,textarea{font-family:inherit;outline:none}
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
 import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,onAuthStateChanged,GoogleAuthProvider,signInWithPopup,sendPasswordResetEmail}from"https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
-import{getFirestore,doc,setDoc,getDoc,collection,addDoc,query,where,orderBy,limit,getDocs,deleteDoc,writeBatch,serverTimestamp}from"https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+import{getFirestore,doc,setDoc,getDoc,collection,addDoc,query,where,orderBy,limit,getDocs,deleteDoc,writeBatch,serverTimestamp,onSnapshot,Timestamp}from"https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
 
 // =====================================================
 // CONFIGURACAO FIREBASE
@@ -366,7 +373,9 @@ const gp=new GoogleAuthProvider();
 // CONSTANTES
 const LIM_G=3,PIX="16997769153",WA="5516997769153";
 const PLF=3.50,PMEGA=6.00,PDUPLA=3.00;
-const CODIGOS_OK=["PREM-MASTER","PREM-EDMAR","PREM-2025"]; // seus codigos reais aqui
+const DIAS_PREM=30;
+// Resultados ficam neste mesmo site (pasta data/), atualizados todo dia pelo GitHub Actions.
+const DADOS={lf:"./data/lotofacil.json",mega:"./data/megasena.json",dupla:"./data/duplasena.json"};
 
 // CONJUNTOS LF
 const MOL=new Set([1,2,3,4,5,6,10,11,15,16,20,21,22,23,24,25]);
@@ -388,8 +397,17 @@ const QD=[new Set(rng(1,13)),new Set(rng(13,25)),new Set(rng(25,38)),new Set(rng
 let u=null,ud={premium:false,geracoesHoje:0,dataHoje:""},anLF=null,anMega=null,anDupla=null,ultRes={tipo:"",combos:[],lot:""},orcTipo="lf",_nums=15;
 
 // ── AUTH ──
+let _unsubUD=null,_admin=false;
 onAuthStateChanged(auth,async usr=>{
-  if(usr){u=usr;await loadUD();showApp();}else{u=null;showLogin();}
+  if(_unsubUD){_unsubUD();_unsubUD=null;}
+  _admin=false;
+  if(usr){
+    u=usr;await loadUD();showApp();
+    // Escuta mudancas no proprio cadastro: quando o admin aprovar, o Premium aparece na hora.
+    _unsubUD=onSnapshot(doc(db,"usuarios",u.uid),sn=>{if(sn.exists()){ud={...sn.data()};updUI();}},()=>{});
+    try{_admin=(await getDoc(doc(db,"admins",u.uid))).exists();}catch(e){_admin=false;}
+    carregarPedido();updUI();
+  }else{u=null;ud={premium:false,geracoesHoje:0,dataHoje:""};showLogin();}
 });
 function showApp(){document.getElementById("tela-login").classList.add("oculta");document.getElementById("app").style.display="flex";updUI();}
 function showLogin(){document.getElementById("tela-login").classList.remove("oculta");document.getElementById("app").style.display="none";}
@@ -425,25 +443,83 @@ async function loadUD(){
   try{
     const ref=doc(db,"usuarios",u.uid);
     const sn=await getDoc(ref);
-    if(sn.exists()){ud=sn.data();}else{ud={premium:false,geracoesHoje:0,dataHoje:""};await setDoc(ref,ud);}
-    const hj=new Date().toISOString().slice(0,10);
+    const hj=hoje();
+    if(sn.exists()){ud=sn.data();}
+    else{ud={premium:false,geracoesHoje:0,dataHoje:hj,email:u.email||""};await setDoc(ref,{...ud,criadoEm:serverTimestamp()});}
     if(ud.dataHoje!==hj){ud.geracoesHoje=0;ud.dataHoje=hj;await saveUD();}
+    if(u.email&&ud.email!==u.email){ud.email=u.email;await saveUD();}
   }catch(e){console.warn(e);}
 }
-async function saveUD(){if(!u)return;try{await setDoc(doc(db,"usuarios",u.uid),ud,{merge:true});}catch(e){}}
-const isPrem=()=>ud.premium===true;
+function hoje(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+// O usuario so pode gravar estes campos (as regras do Firestore bloqueiam o resto).
+async function saveUD(){if(!u)return;try{await setDoc(doc(db,"usuarios",u.uid),{geracoesHoje:ud.geracoesHoje||0,dataHoje:ud.dataHoje||"",email:u.email||""},{merge:true});}catch(e){console.warn(e);}}
+const premAte=()=>ud.premiumAte&&ud.premiumAte.toDate?ud.premiumAte.toDate():null;
+const isPrem=()=>{if(ud.premium!==true)return false;const a=premAte();return !a||a>new Date();};
 const podGer=()=>isPrem()||(ud.geracoesHoje||0)<LIM_G;
 const gerRest=()=>isPrem()?999:Math.max(0,LIM_G-(ud.geracoesHoje||0));
 async function regGer(){if(isPrem())return;ud.geracoesHoje=(ud.geracoesHoje||0)+1;await saveUD();}
 
-// ── CODIGO PREMIUM ──
-window.ativarCod=async()=>{
-  const cod=_v("cod-pix").toUpperCase().trim();
-  if(!cod){toast("Digite o codigo.");return;}
-  if(!CODIGOS_OK.includes(cod)){toast("Codigo invalido.");return;}
-  ud.premium=true;await saveUD();
-  try{await setDoc(doc(db,"codigos_usados",cod),{uid:u.uid,email:u.email,at:serverTimestamp()});}catch(e){}
-  toast("🎉 Premium ativado!");updUI();
+// ── PEDIDO DE ATIVACAO PREMIUM ──
+// O usuario avisa que pagou; so o admin consegue liberar (garantido pelas regras do Firestore).
+let pedido=null;
+async function carregarPedido(){
+  if(!u)return;
+  try{const sn=await getDoc(doc(db,"pedidos",u.uid));pedido=sn.exists()?sn.data():null;}catch(e){pedido=null;}
+  updUI();
+}
+window.solicitarAtivacao=async()=>{
+  if(!u)return;
+  if(pedido&&pedido.status==="pendente"){toast("Seu pedido ja esta em analise.");return;}
+  try{
+    await setDoc(doc(db,"pedidos",u.uid),{uid:u.uid,email:u.email||"",status:"pendente",criadoEm:serverTimestamp()});
+    pedido={status:"pendente"};updUI();
+    toast("✓ Pedido enviado! Avise pelo WhatsApp para agilizar.");
+  }catch(e){toast("Erro ao enviar pedido: "+e.message);}
+};
+
+// ── PAINEL DO ADMIN ──
+function novaValidade(atual){
+  const base=atual&&atual.toDate&&atual.toDate()>new Date()?atual.toDate():new Date();
+  return Timestamp.fromDate(new Date(base.getTime()+DIAS_PREM*864e5));
+}
+async function admAprovar(uid){
+  const ref=doc(db,"usuarios",uid);const sn=await getDoc(ref);
+  const atual=sn.exists()?sn.data().premiumAte:null;
+  const b=writeBatch(db);
+  b.set(ref,{premium:true,premiumAte:novaValidade(atual)},{merge:true});
+  b.set(doc(db,"pedidos",uid),{uid,status:"aprovado",resolvidoEm:serverTimestamp()},{merge:true});
+  await b.commit();
+}
+window.admCarregar=async()=>{
+  if(!_admin)return;
+  const el=_id("adm-lista");el.innerHTML=`<div class="spinner"><div class="spin"></div>Carregando...</div>`;
+  try{
+    const sn=await getDocs(query(collection(db,"pedidos"),where("status","==","pendente")));
+    if(sn.empty){el.innerHTML=`<div class="aviso ai">Nenhum pedido pendente.</div>`;return;}
+    el.innerHTML="";
+    sn.docs.map(d=>d.data()).sort((a,b)=>(a.criadoEm?.seconds||0)-(b.criadoEm?.seconds||0)).forEach(p=>{
+      const row=document.createElement("div");row.className="crow";
+      const quando=p.criadoEm?.toDate?p.criadoEm.toDate().toLocaleString("pt-BR"):"";
+      row.innerHTML=`<div class="cnums"></div><div class="cpts">${quando}</div><div style="display:flex;gap:6px;margin-top:6px"><button class="btn btn-verde btn-sm" style="flex:1">Aprovar 30 dias</button><button class="btn btn-cin btn-sm" style="flex:1">Recusar</button></div>`;
+      row.querySelector(".cnums").textContent=p.email||p.uid;
+      const[bA,bR]=row.querySelectorAll("button");
+      bA.onclick=async()=>{bA.disabled=bR.disabled=true;try{await admAprovar(p.uid);toast("✓ Premium liberado para "+(p.email||p.uid));row.remove();}catch(e){toast("Erro: "+e.message);bA.disabled=bR.disabled=false;}};
+      bR.onclick=async()=>{if(!confirm("Recusar o pedido de "+(p.email||p.uid)+"?"))return;try{await setDoc(doc(db,"pedidos",p.uid),{status:"recusado",resolvidoEm:serverTimestamp()},{merge:true});row.remove();}catch(e){toast("Erro: "+e.message);}};
+      el.appendChild(row);
+    });
+  }catch(e){el.innerHTML="";toast("Erro: "+e.message);}
+};
+window.admAtivarEmail=async()=>{
+  if(!_admin)return;
+  const em=_v("adm-email").toLowerCase();
+  if(!em){toast("Digite o e-mail.");return;}
+  try{
+    let sn=await getDocs(query(collection(db,"usuarios"),where("email","==",em)));
+    if(sn.empty&&em!==_v("adm-email"))sn=await getDocs(query(collection(db,"usuarios"),where("email","==",_v("adm-email"))));
+    if(sn.empty){toast("Usuario nao encontrado. Ele precisa entrar no app ao menos uma vez.");return;}
+    await admAprovar(sn.docs[0].id);
+    toast("✓ Premium liberado para "+em);_id("adm-email").value="";
+  }catch(e){toast("Erro: "+e.message);}
 };
 
 // ── FIRESTORE DB ──
@@ -648,12 +724,12 @@ function sepDupla(raw){
 }
 
 // ── DOWNLOADS ──
-async function fetchJ(url){const r=await fetch(url);if(!r.ok)throw new Error("HTTP "+r.status);return r.json();}
+async function fetchJ(url){const r=await fetch(url,{cache:"no-cache"});if(!r.ok)throw new Error("HTTP "+r.status);return r.json();}
 
 window.baixarLF=async()=>{
   setS("lf","Conectando...","i");disaBtsLF();
   try{
-    const dados=await fetchJ("https://raw.githubusercontent.com/guilhermeasn/loteria.json/master/data/lotofacil.json");
+    const dados=await fetchJ(DADOS.lf);
     let cs;
     if(Array.isArray(dados)){cs=dados.sort((a,b)=>Number(b.concurso||b.numero||0)-Number(a.concurso||a.numero||0));}
     else{cs=Object.entries(dados).sort((a,b)=>Number(b[0])-Number(a[0])).map(([k,v])=>({numero:Number(k),dezenas:v})).filter(c=>Array.isArray(c.dezenas)&&c.dezenas.length===15);}
@@ -668,7 +744,7 @@ window.baixarLF=async()=>{
 window.baixarMega=async()=>{
   setS("mega","Baixando Mega-Sena...","i");
   try{
-    const dados=await fetchJ("https://raw.githubusercontent.com/guilhermeasn/loteria.json/master/data/megasena.json");
+    const dados=await fetchJ(DADOS.mega);
     let dl;
     if(Array.isArray(dados)){dl=dados.sort((a,b)=>Number(b.concurso||b.numero||0)-Number(a.concurso||a.numero||0)).filter(c=>Array.isArray(c.dezenas)&&c.dezenas.length===6).map(c=>c.dezenas.map(Number));}
     else{dl=Object.entries(dados).sort((a,b)=>Number(b[0])-Number(a[0])).filter(([,v])=>Array.isArray(v)&&v.length===6).map(([,v])=>v.map(Number));}
@@ -680,7 +756,7 @@ window.baixarMega=async()=>{
 window.baixarDupla=async()=>{
   setS("dupla","Baixando Dupla Sena...","i");
   try{
-    const dados=await fetchJ("https://raw.githubusercontent.com/guilhermeasn/loteria.json/master/data/duplasena.json");
+    const dados=await fetchJ(DADOS.dupla);
     const itens=Object.entries(dados).sort((a,b)=>Number(b[0])-Number(a[0])).filter(([,v])=>Array.isArray(v)&&v.length===12).map(([,v])=>v.map(Number));
     const{d1,d2}=sepDupla(itens);
     anDupla={d1,d2,total:d1.length};
@@ -880,9 +956,19 @@ function updUI(){
   ["b-todos","b-pad","b-14","b-13","b-12","b-11","b-16","b-fech","b-orc-lf"].forEach(i=>{const b=_id(i);if(b)b.disabled=!(pm&&df);});
   if(u){
     const ce=_id("c-email");if(ce)ce.textContent=u.email;
-    const cs=_id("c-status");if(cs)cs.textContent=pm?"Conta Premium — Acesso total":"Conta gratuita — "+rt+" geracao(oes) restante(s) hoje";
+    const ate=premAte();
+    const cs=_id("c-status");if(cs)cs.textContent=pm?"Conta Premium — Acesso total"+(ate?" ate "+ate.toLocaleDateString("pt-BR"):""):(ud.premium&&ate?"Premium vencido em "+ate.toLocaleDateString("pt-BR")+" — renove abaixo. ":"Conta gratuita — ")+rt+" geracao(oes) restante(s) hoje";
     const mu=_id("mu-em");if(mu)mu.textContent=u.email;
+    const ps=_id("pedido-st"),bp=_id("b-pedido");
+    if(ps&&bp){
+      const pend=pedido&&pedido.status==="pendente"&&!pm;
+      ps.style.display=pend||(pedido&&pedido.status==="recusado"&&!pm)?"block":"none";
+      ps.className="aviso "+(pedido&&pedido.status==="recusado"?"ae":"ai");
+      ps.textContent=pend?"⏳ Pedido enviado — aguardando confirmacao do pagamento.":"Pedido anterior nao aprovado. Fale conosco pelo WhatsApp.";
+      bp.disabled=!!pend;
+    }
   }
+  const adm=_id("adm-sec");if(adm)adm.style.display=_admin?"block":"none";
 }
 window.irT=(id,btn)=>{
   document.querySelectorAll(".tela").forEach(t=>t.classList.remove("ativa"));
@@ -900,6 +986,10 @@ window.toast=msg=>{const t=_id("toast");t.textContent=msg;t.classList.add("vis")
 function _id(id){return document.getElementById(id);}
 function _v(id){return _id(id).value.trim();}
 updUI();
+</script>
+<script>
+// Permite instalar o app e usar sem internet (com os ultimos dados baixados).
+if("serviceWorker" in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("./sw.js").catch(e=>console.warn("SW:",e));});}
 </script>
 </body>
 </html>
