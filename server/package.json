@@ -1,0 +1,17 @@
+{
+  "name": "bola-marcada-servidor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Servidor de geracao de jogos e conferencia automatica — 15 Pontos",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "node teste.js",
+    "conferir": "node conferir.js"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "firebase-admin": "^13.0.0"
+  }
+}

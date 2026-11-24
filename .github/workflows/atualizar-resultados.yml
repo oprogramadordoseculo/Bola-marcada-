@@ -17,6 +17,9 @@ concurrency:
 jobs:
   atualizar:
     runs-on: ubuntu-latest
+    env:
+      # Segredo com o JSON da conta de servico do Firebase (Settings > Secrets > Actions).
+      FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
     steps:
       - uses: actions/checkout@v4
 
@@ -38,3 +41,15 @@ jobs:
           git add data/
           git commit -m "Resultados atualizados $(date -u +%Y-%m-%d)"
           git push
+
+      - uses: actions/setup-node@v4
+        if: ${{ env.FIREBASE_SA != '' }}
+        with:
+          node-version: "20"
+
+      - name: Conferir jogos salvos dos usuarios
+        if: ${{ env.FIREBASE_SA != '' }}
+        working-directory: server
+        run: |
+          npm ci --omit=dev --no-audit --no-fund
+          node conferir.js ../data

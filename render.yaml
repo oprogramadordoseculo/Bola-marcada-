@@ -1,0 +1,17 @@
+# Configuracao do servidor no Render (plano gratis).
+services:
+  - type: web
+    name: bola-marcada-api
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: server
+    buildCommand: npm ci --omit=dev
+    startCommand: node index.js
+    healthCheckPath: /saude
+    autoDeploy: true
+    envVars:
+      - key: FIREBASE_SA
+        sync: false
+      - key: ORIGENS
+        value: https://oprogramadordoseculo.github.io
