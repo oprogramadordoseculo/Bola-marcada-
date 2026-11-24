@@ -334,6 +334,31 @@ input,textarea{font-family:inherit;outline:none}
 </div>
 
 <!-- MODAL GRUPO -->
+<div id="m-fech" class="mo">
+  <div class="mbox">
+    <div class="mtit">&#128274; Fechamento matematico</div>
+    <div class="ilabel">Quantas dezenas e qual garantia</div>
+    <select id="fe-op" class="icampo" onchange="prevFech()">
+      <option value="17-14">17 dezenas — garante 14 pts (~8 jogos)</option>
+      <option value="18-13">18 dezenas — garante 13 pts (~6 jogos)</option>
+      <option value="18-14" selected>18 dezenas — garante 14 pts (~35 jogos)</option>
+      <option value="19-12">19 dezenas — garante 12 pts (~4 jogos)</option>
+      <option value="19-13">19 dezenas — garante 13 pts (~14 jogos)</option>
+      <option value="20-12">20 dezenas — garante 12 pts (~4 jogos)</option>
+      <option value="20-13">20 dezenas — garante 13 pts (~46 jogos)</option>
+    </select>
+    <div class="ilabel">Dezenas (deixe vazio para escolher automaticamente as mais sorteadas nos ultimos 30 concursos)</div>
+    <input type="text" id="fe-dez" class="icampo" placeholder="Ex: 01 02 03 05 07 ..." inputmode="numeric" oninput="prevFech()">
+    <div id="fe-prev" style="font-size:12px;color:var(--ouro2);margin-bottom:10px"></div>
+    <div class="aviso ao" style="font-size:11px">A garantia vale <b>somente se as 15 dezenas sorteadas estiverem entre as dezenas escolhidas</b>. Nao e garantia de premio.</div>
+    <div id="fe-av" class="aviso ae" style="display:none"></div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-verde" style="flex:1;margin:0" onclick="confFech()">&#10003;  Gerar</button>
+      <button class="btn btn-cin" style="flex:1;margin:0" onclick="fechaM('m-fech')">&#10005;  Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div id="m-grp" class="mo">
   <div class="mbox">
     <div class="mtit" id="mg-tit">Geracao</div>
@@ -524,13 +549,15 @@ window.admAtivarEmail=async()=>{
 };
 
 // ── FIRESTORE DB ──
-async function salvarFS(tipo,combos){
+async function salvarFS(tipo,combos,lot=""){
   if(!u)return;
   const agora=new Date().toLocaleString("pt-BR");
   const col=collection(db,"combinacoes",u.uid,"jogos");
+  for(let i=0;i<combos.length;i+=450){
   const bch=writeBatch(db);
-  combos.forEach(c=>{bch.set(doc(col),{data:agora,tipo,numeros:c.join(" "),pontos:null,criadoEm:serverTimestamp()});});
+  combos.slice(i,i+450).forEach(c=>{bch.set(doc(col),{data:agora,tipo,lot,numeros:c.join(" "),pontos:null,criadoEm:serverTimestamp()});});
   await bch.commit();
+  }
 }
 async function lerFS(lim=200){
   if(!u)return[];
@@ -542,7 +569,13 @@ async function atuPts(id,pts){
 }
 async function limparFS(){
   if(!u)return;
-  try{const q=query(collection(db,"combinacoes",u.uid,"jogos"),limit(500));const sn=await getDocs(q);const b=writeBatch(db);sn.docs.forEach(d=>b.delete(d.ref));await b.commit();}catch(e){}
+  try{
+    for(;;){
+      const sn=await getDocs(query(collection(db,"combinacoes",u.uid,"jogos"),limit(450)));
+      if(sn.empty)break;
+      const b=writeBatch(db);sn.docs.forEach(d=>b.delete(d.ref));await b.commit();
+    }
+  }catch(e){toast("Erro ao limpar: "+e.message);}
 }
 
 // ── MATH ──
@@ -551,7 +584,7 @@ function soma(a){return a.reduce((s,n)=>s+n,0);}
 function cnt(a,s){return a.filter(n=>s.has(n)).length;}
 function pares(a){return a.filter(n=>n%2===0).length;}
 function shuf(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
-function comb(n,k){if(k>n)return 1;let r=1;for(let i=0;i<k;i++){r=r*(n-i)/(i+1);}return Math.round(r);}
+function comb(n,k){if(k>n)return 0;let r=1;for(let i=0;i<k;i++){r=r*(n-i)/(i+1);}return Math.round(r);}
 function pesado(univ,pesos,k){
   const ch=univ.map((_,i)=>({i,v:Math.random()**(1/pesos[i])}));
   ch.sort((a,b)=>b.v-a.v);
@@ -735,11 +768,14 @@ window.baixarLF=async()=>{
     if(Array.isArray(dados)){cs=dados.sort((a,b)=>Number(b.concurso||b.numero||0)-Number(a.concurso||a.numero||0));}
     else{cs=Object.entries(dados).sort((a,b)=>Number(b[0])-Number(a[0])).map(([k,v])=>({numero:Number(k),dezenas:v})).filter(c=>Array.isArray(c.dezenas)&&c.dezenas.length===15);}
     anLF=anLFH(cs);
-    await regGer();
-    const combos=gerarLF(anLF,10);
-    ultRes={tipo:"10 Combinacoes Gerais",combos,lot:"lf"};
-    showResLF(combos,"10 Combinacoes Gerais");
-    setS("lf","✓ "+anLF.total+" concursos analisados.","i");updUI();
+    setS("lf","✓ "+anLF.total+" concursos analisados (ultimo: "+cs[0].numero+").","i");
+    if(podGer()){
+      await regGer();
+      const combos=gerarLF(anLF,10);
+      ultRes={tipo:"10 Combinacoes Gerais",combos,lot:"lf"};
+      showResLF(combos,"10 Combinacoes Gerais");
+    }else toast("Historico carregado. Limite diario de geracoes atingido.");
+    updUI();
   }catch(e){setS("lf","Erro: "+e.message,"e");}
 };
 window.baixarMega=async()=>{
@@ -797,22 +833,84 @@ window.gPts=async(mp)=>{
   const combos=[];for(const p of pads)combos.push(...gerarLF(anLF,10,p.chave,p.valor));
   ultRes={tipo:"Padroes "+mp+" Pts",combos,lot:"lf"};showResLF(combos,"Padroes "+mp+" Pontos — 30 Combinacoes");
 };
-window.g16=async()=>{
-  if(!precisaLF(true))return;
-  const{q,fr}=quentes(anLF.dl);
+// Filtro para jogos de 16 dezenas (faixas equivalentes as de 15, ajustadas para 16).
+function filtLF16(c,uS){
+  const p=pares(c);if(p<7||p>9)return false;
+  const pr=cnt(c,PRI);if(pr<5||pr>7)return false;
+  const rep=c.filter(n=>uS.has(n)).length;if(rep<9||rep>11)return false;
+  const s=soma(c);if(s<190||s>226)return false;
+  return true;
+}
+function gerar16(an,qtd){
+  const{q,fr}=quentes(an.dl);
   const uni=rng(1,26),pesos=uni.map(n=>q.has(n)?3.0:fr.has(n)?0.6:1.5);
   const cands=[],vis=new Set();let t=0;
-  while(cands.length<90&&t<80000){t++;const c=pesado(uni,pesos,16).sort((a,b)=>a-b);const tk=c.join(",");if(vis.has(tk))continue;vis.add(tk);cands.push(c);}
+  while(cands.length<qtd*3&&t<80000){t++;const c=pesado(uni,pesos,16).sort((a,b)=>a-b);const tk=c.join(",");if(vis.has(tk))continue;vis.add(tk);if(!filtLF16(c,an.ultimoSet))continue;cands.push(c);}
+  while(cands.length<qtd)cands.push(pesado(uni,pesos,16).sort((a,b)=>a-b));
   cands.sort((a,b)=>pontLF(a,q,fr)-pontLF(b,q,fr));
-  const combos=cands.slice(0,30);
+  return cands.slice(0,qtd);
+}
+window.g16=async()=>{
+  if(!precisaLF(true))return;
+  const combos=gerar16(anLF,30);
   ultRes={tipo:"16 Numeros 30 Combos",combos,lot:"lf"};showResLF(combos,"16 Numeros — 30 Combinacoes");
 };
-window.gFech=async()=>{
+// Fechamento (cobertura gulosa). Cada jogo e representado pelas m=n-15 dezenas que ficam de fora (g).
+// Se o sorteio D esta dentro das n dezenas (de fora: d), acertos = 15-m+|g∩d|.
+// Garantir t pontos => todo d precisa ter algum g com |g∩d| >= t-15+m.
+// Garantia conferida por forca bruta para todas as opcoes do menu.
+function fechamentoLF(dez,garantia){
+  const n=dez.length,m=n-15,r=garantia-15+m;
+  const subs=[];
+  (function rec(st,k,mask){if(k===0){subs.push(mask);return;}for(let i=st;i<=n-k;i++)rec(i+1,k-1,mask|(1<<i));})(0,m,0);
+  const jogo=mask=>{const g=[];for(let i=0;i<n;i++)if(!(mask&(1<<i)))g.push(dez[i]);return g.sort((a,b)=>a-b);};
+  if(m<1||r<=0)return[jogo(subs[0]||0)];
+  const pc=x=>{x-=(x>>>1)&0x55555555;x=(x&0x33333333)+((x>>>2)&0x33333333);return(((x+(x>>>4))&0xF0F0F0F)*0x1010101)>>>24;};
+  const N=subs.length,viz=new Array(N);
+  for(let i=0;i<N;i++){const v=[];for(let j=0;j<N;j++)if(pc(subs[i]&subs[j])>=r)v.push(j);viz[i]=v;}
+  const cob=new Uint8Array(N),ganho=viz.map(v=>v.length),esc=[];let falta=N;
+  while(falta>0){
+    let best=-1,bg=-1;
+    for(let i=0;i<N;i++){const g=ganho[i]+Math.random()*0.5;if(g>bg){bg=g;best=i;}}
+    esc.push(best);
+    for(const j of viz[best])if(!cob[j]){cob[j]=1;falta--;for(const k of viz[j])ganho[k]--;}
+  }
+  return esc.map(i=>jogo(subs[i]));
+}
+function dezFech(){
+  const[n]=_id("fe-op").value.split("-").map(Number);
+  const txt=_v("fe-dez");
+  if(txt){
+    const ds=[...new Set((txt.match(/\d+/g)||[]).map(Number))].filter(x=>x>=1&&x<=25).sort((a,b)=>a-b);
+    return{ds,n,manual:true};
+  }
+  const f={};for(let i=1;i<=25;i++)f[i]=0;
+  anLF.dl.slice(0,30).forEach(d=>d.forEach(x=>f[x]++));
+  const ds=Object.keys(f).map(Number).sort((a,b)=>f[b]-f[a]||a-b).slice(0,n).sort((a,b)=>a-b);
+  return{ds,n,manual:false};
+}
+window.prevFech=()=>{
+  if(!anLF)return;
+  const{ds,n,manual}=dezFech();
+  const p=_id("fe-prev");
+  if(manual&&ds.length!==n){p.textContent=`Voce digitou ${ds.length} dezena(s) validas — precisa de ${n}.`;return;}
+  p.textContent=(manual?"Suas dezenas: ":"Automaticas: ")+ds.map(x=>String(x).padStart(2,"0")).join(" ");
+};
+window.gFech=()=>{
   if(!precisaLF(true))return;
-  const{q,fr}=quentes(anLF.dl);
-  const pesos=rng(1,26).map(n=>q.has(n)?3.0:fr.has(n)?0.6:1.5);
-  const combos=gerarLF(anLF,10);
-  ultRes={tipo:"Fechamento Matematico",combos,lot:"lf"};showResLF(combos,"Fechamento Matematico — Filtros Rigorosos");
+  _id("fe-av").style.display="none";prevFech();
+  _id("m-fech").classList.add("aberto");
+};
+window.confFech=()=>{
+  const{ds,n}=dezFech();
+  const t=Number(_id("fe-op").value.split("-")[1]);
+  if(ds.length!==n){const av=_id("fe-av");av.style.display="block";av.textContent=`Escolha exatamente ${n} dezenas (de 1 a 25).`;return;}
+  fechaM("m-fech");toast("Calculando fechamento...");
+  setTimeout(()=>{
+    const combos=fechamentoLF(ds,t);
+    const tit=`Fechamento ${n} dezenas — garante ${t} pts — ${combos.length} jogos (R$ ${(combos.length*PLF).toFixed(2).replace(".",",")})`;
+    ultRes={tipo:`Fechamento ${n}d/${t}pts`,combos,lot:"lf"};showResLF(combos,tit);
+  },50);
 };
 window.g8Dupla=()=>{
   if(!anDupla){toast("Baixe o historico da Dupla Sena.");return;}
@@ -840,7 +938,7 @@ function prevOrc(){
   let preco,qtd;
   if(orcTipo==="lf"){const m=comb(_nums,15);preco=PLF*m;qtd=Math.floor(v/preco);p.textContent=qtd>0?`Cabem ${qtd} jogo(s) de ${_nums} dezenas a R$ ${preco.toFixed(2)} cada`:`Orcamento insuficiente (jogo custa R$ ${preco.toFixed(2)})`;}
   else if(orcTipo==="mega"){preco=PMEGA;qtd=Math.floor(v/preco);p.textContent=qtd>0?`Cabem ${qtd} jogo(s) a R$ ${preco.toFixed(2)} cada`:`Orcamento insuficiente`;}
-  else{preco=PDUPLA;qtd=Math.floor(v/2/preco);p.textContent=qtd>0?`${qtd} jogo(s) p/ 1o sorteio + ${qtd} p/ 2o (R$ ${preco.toFixed(2)} cada)`:`Orcamento insuficiente`;}
+  else{preco=PDUPLA;qtd=Math.floor(v/preco);p.textContent=qtd>0?`Cabem ${qtd} jogo(s) a R$ ${preco.toFixed(2)} cada (cada jogo concorre nos 2 sorteios)`:`Orcamento insuficiente`;}
 }
 window.confOrc=async()=>{
   const v=parseFloat(_id("orc-v").value.replace(",","."));
@@ -851,7 +949,7 @@ window.confOrc=async()=>{
     if(!isPrem()){toast("Orcamento disponivel apenas no Premium.");irT("t-conta");return;}
     const m=comb(_nums,15),p=PLF*m,q=Math.floor(v/p);
     if(q<=0){toast("Orcamento insuficiente.");return;}
-    const combos=gerarLF(anLF,q);
+    const combos=_nums===16?gerar16(anLF,q):gerarLF(anLF,q);
     ultRes={tipo:`Orcamento R$ ${v.toFixed(2)}`,combos,lot:"lf"};showResLF(combos,`Por Orcamento R$ ${v.toFixed(2)}`);
   }else if(orcTipo==="mega"){
     if(!anMega){toast("Baixe o historico da Mega-Sena.");return;}
@@ -860,10 +958,10 @@ window.confOrc=async()=>{
     ultRes={tipo:`Mega R$ ${v.toFixed(2)}`,combos,lot:"mega"};showResMega(combos,`Por Orcamento R$ ${v.toFixed(2)}`);
   }else{
     if(!anDupla){toast("Baixe o historico da Dupla Sena.");return;}
-    const q=Math.floor(v/2/PDUPLA);if(q<=0){toast("Orcamento insuficiente.");return;}
-    const j1=gerarDupla(anDupla.d1,anDupla.d1[0]||[],q);
-    const j2=gerarDupla(anDupla.d2,anDupla.d2[0]||[],q);
-    const combos=[...j1,...j2];
+    const q=Math.floor(v/PDUPLA);if(q<=0){toast("Orcamento insuficiente.");return;}
+    // Cada aposta da Dupla Sena concorre nos dois sorteios: usa o historico dos dois juntos.
+    const todos=[];for(let i=0;i<anDupla.d1.length;i++){todos.push(anDupla.d1[i]);if(anDupla.d2[i])todos.push(anDupla.d2[i]);}
+    const combos=gerarDupla(todos,anDupla.d1[0]||[],q);
     ultRes={tipo:`Dupla R$ ${v.toFixed(2)}`,combos,lot:"dupla"};showResDupla(combos,`Por Orcamento R$ ${v.toFixed(2)}`);
   }
 };
@@ -897,7 +995,7 @@ function showResDupla(combos,tit){
 window.salvar=async(lot)=>{
   if(!isPrem()&&lot==="lf"){toast("Salvar disponivel apenas no Premium.");irT("t-conta");return;}
   if(!ultRes.combos.length){toast("Nada para salvar.");return;}
-  try{await salvarFS(ultRes.tipo,ultRes.combos);toast(`✓ ${ultRes.combos.length} combinacoes salvas!`);}
+  try{await salvarFS(ultRes.tipo,ultRes.combos,ultRes.lot);toast(`✓ ${ultRes.combos.length} combinacoes salvas!`);}
   catch(e){toast("Erro ao salvar: "+e.message);}
 };
 window.fecharRes=id=>{_id(id+"-res").style.display="none";};
@@ -929,21 +1027,31 @@ window.conferirTodos=async()=>{
   if(!txt){toast("Digite os numeros sorteados.");return;}
   const nums=[...new Set((txt.match(/\d+/g)||[]).map(Number))].sort((a,b)=>a-b);
   if(!nums.length){toast("Numeros invalidos.");return;}
-  const rows=await lerFS();if(!rows.length){toast("Nenhum jogo salvo.");return;}
-  const comp=rows.filter(r=>r.numeros.trim().split(/\s+/).length===nums.length);
+  const rows=await lerFS(1000);if(!rows.length){toast("Nenhum jogo salvo.");return;}
+  const tam=r=>r.numeros.trim().split(/\s+/).length;
+  // 15 numeros = Lotofacil (inclui jogos de 16 dezenas); 6 = Mega/Dupla.
+  const comp=nums.length===15?rows.filter(r=>r.lot==="lf"||(!r.lot&&(tam(r)===15||tam(r)===16)))
+    :rows.filter(r=>r.lot!=="lf"&&tam(r)===nums.length);
   if(!comp.length){toast("Nenhum jogo com "+nums.length+" numeros.");return;}
   const ns=new Set(nums);const lista=_id("h-lista");
   lista.innerHTML=`<div class="aviso ao" style="margin-bottom:8px">Resultado: ${nums.map(n=>String(n).padStart(2,"0")).join(" ")}</div>`;
   let mel=0;
   for(const r of comp){
     const rn=r.numeros.trim().split(/\s+/).map(Number);const ac=rn.filter(n=>ns.has(n)).length;
-    mel=Math.max(mel,ac);await atuPts(r.id,ac);
+    mel=Math.max(mel,ac);r._ac=ac;
     const d=document.createElement("div");d.className="crow";
     const dest=ac>=11?` style="color:var(--ouro2);font-weight:700"`:"";
     d.innerHTML=`<div class="cnums">${r.numeros}</div><div class="cpts"><span class="dest"${dest}>${ac} pontos</span> — ${r.tipo} [${r.data}]</div>`;
     lista.appendChild(d);
   }
   lista.insertAdjacentHTML("beforeend",`<div class="aviso ai">Total: ${comp.length} jogos · Melhor: ${mel} pts</div>`);
+  try{
+    for(let i=0;i<comp.length;i+=450){
+      const b=writeBatch(db);
+      comp.slice(i,i+450).forEach(r=>b.set(doc(db,"combinacoes",u.uid,"jogos",r.id),{pontos:r._ac},{merge:true}));
+      await b.commit();
+    }
+  }catch(e){toast("Erro ao gravar pontos: "+e.message);}
 };
 window.limparH=async()=>{
   if(!confirm("Limpar TODOS os jogos salvos? Esta acao nao pode ser desfeita."))return;
