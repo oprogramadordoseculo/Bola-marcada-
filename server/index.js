@@ -10,8 +10,22 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { criarHandler, prepararDados, hojeSP, LIM_GRATIS } from "./app.js";
 
-const sa = JSON.parse(process.env.FIREBASE_SA || "null");
-if (!sa) { console.error("Falta a variavel FIREBASE_SA."); process.exit(1); }
+// Aceita o JSON colado direto ou em base64; explica o erro com clareza no log.
+function lerChave(txt) {
+  txt = (txt || "").trim();
+  if (!txt) throw new Error("Falta a variavel FIREBASE_SA (Environment > Add Environment Variable).");
+  if (!txt.startsWith("{")) { try { txt = Buffer.from(txt, "base64").toString("utf8").trim(); } catch { /* segue */ } }
+  let sa;
+  try { sa = JSON.parse(txt); } catch (e) {
+    throw new Error(`FIREBASE_SA invalida (${txt.length} caracteres, comeca com "${txt.slice(0, 1)}" e termina com "${txt.slice(-1)}"). ` +
+      "Cole o conteudo INTEIRO do arquivo .json, do { inicial ate o } final. Detalhe: " + e.message);
+  }
+  for (const k of ["project_id", "client_email", "private_key"]) if (!sa[k]) throw new Error(`FIREBASE_SA sem o campo "${k}" — parece incompleta.`);
+  return sa;
+}
+let sa;
+try { sa = lerChave(process.env.FIREBASE_SA); console.log("Chave OK — projeto", sa.project_id); }
+catch (e) { console.error("ERRO:", e.message); process.exit(1); }
 initializeApp({ credential: cert(sa) });
 const auth = getAuth(), db = getFirestore();
 
