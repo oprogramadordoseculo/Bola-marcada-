@@ -1,8 +1,8 @@
 // Service worker — 15 Pontos
 // Troque a VERSAO sempre que publicar mudanças no app, para os celulares pegarem a nova versão.
-const VERSAO = "v6";
+const VERSAO = "v7";
 const CACHE = "15pontos-" + VERSAO;
-const BASICO = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./volante.js"];
+const BASICO = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./volante.js", "./graficos.js"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(BASICO)).then(() => self.skipWaiting()));

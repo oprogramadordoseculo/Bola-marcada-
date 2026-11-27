@@ -47,6 +47,21 @@ input,textarea{font-family:inherit;outline:none}
 .btn:active{transform:scale(.98);opacity:.85}
 .btn:disabled{opacity:.4;pointer-events:none}
 .btn.bloq{opacity:.4}
+:root{--g-barra:#12a050;--g-barra-ativa:#5fe39a;--g-grade:rgba(255,255,255,.08);--g-texto:#999;--g-ref:#8c8c8c;--g-ref-txt:#c8c8c8}
+.g-filtros{display:flex;gap:6px;margin-bottom:10px;flex-wrap:nowrap;align-items:center}
+.g-filtro-tit{font-size:11px;color:var(--cinza4);align-self:center;margin-right:2px}
+.g-filtros button{flex:1;min-width:44px;padding:7px 4px;border-radius:8px;background:var(--cinza2);color:var(--cinza4);font-size:11px;font-weight:700}
+.g-filtros button.ativo{background:var(--verde2);color:#fff}
+.g-sub{font-size:12px;color:#ddd;margin:6px 0 4px;font-weight:600}
+.g-graf{margin-bottom:8px;touch-action:pan-y}
+.g-dica{position:absolute;pointer-events:none;background:#000;border:1px solid var(--borda);border-radius:8px;padding:6px 8px;font-size:11px;color:#fff;line-height:1.4;white-space:nowrap;box-shadow:var(--sombra);z-index:5}
+.g-chips{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:6px 0;font-size:12px;color:var(--cinza4)}
+.g-chips-tit{margin-right:4px;min-width:118px}
+.g-chip{background:var(--cinza2);border:1px solid var(--borda);border-radius:6px;padding:2px 6px;color:#fff;font-weight:700;font-size:12px}
+.g-aviso{font-size:11px;color:var(--cinza4);margin:8px 0}
+.g-tab table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+.g-tab th,.g-tab td{padding:4px 6px;border-bottom:1px solid var(--borda);text-align:center}
+.g-tab th{color:var(--cinza4);font-weight:600}
 .btn-verde{background:linear-gradient(135deg,var(--verde2),var(--verde3))}
 .btn-ouro{background:linear-gradient(135deg,#8a6400,var(--ouro))}
 .btn-roxo{background:linear-gradient(135deg,var(--roxo),#7a2aaa)}
@@ -204,6 +219,7 @@ input,textarea{font-family:inherit;outline:none}
           <button class="btn btn-cin" style="flex:1;margin:0" onclick="fecharRes('lf')">&#10005; Fechar</button>
         </div>
       </div>
+      <div id="lf-freq" class="secao" style="display:none"></div>
     </div>
 
     <!-- MEGA-SENA -->
@@ -222,6 +238,7 @@ input,textarea{font-family:inherit;outline:none}
           <button class="btn btn-cin" style="flex:1;margin:0" onclick="fecharRes('mega')">&#10005; Fechar</button>
         </div>
       </div>
+      <div id="mega-freq" class="secao" style="display:none"></div>
     </div>
 
     <!-- DUPLA SENA -->
@@ -241,6 +258,7 @@ input,textarea{font-family:inherit;outline:none}
           <button class="btn btn-cin" style="flex:1;margin:0" onclick="fecharRes('dupla')">&#10005; Fechar</button>
         </div>
       </div>
+      <div id="dupla-freq" class="secao" style="display:none"></div>
     </div>
 
     <!-- HISTORICO -->
@@ -398,6 +416,7 @@ input,textarea{font-family:inherit;outline:none}
 <div id="toast"></div>
 
 <script src="volante.js"></script>
+<script src="graficos.js"></script>
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
 import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,onAuthStateChanged,GoogleAuthProvider,signInWithPopup,sendPasswordResetEmail}from"https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
@@ -701,6 +720,7 @@ window.baixarLF=async()=>{
     if(Array.isArray(dados)){cs=dados.sort((a,b)=>Number(b.concurso||b.numero||0)-Number(a.concurso||a.numero||0));}
     else{cs=Object.entries(dados).sort((a,b)=>Number(b[0])-Number(a[0])).map(([k,v])=>({numero:Number(k),dezenas:v})).filter(c=>Array.isArray(c.dezenas)&&c.dezenas.length===15);}
     anLF=anLFH(cs);
+    mostrarGraficos("lf");
     setS("lf","✓ "+anLF.total+" concursos analisados (ultimo: "+cs[0].numero+").","i");
     updUI();
     if(podGer())await pedirJogos("lf10");
@@ -715,6 +735,7 @@ window.baixarMega=async()=>{
     if(Array.isArray(dados)){dl=dados.sort((a,b)=>Number(b.concurso||b.numero||0)-Number(a.concurso||a.numero||0)).filter(c=>Array.isArray(c.dezenas)&&c.dezenas.length===6).map(c=>c.dezenas.map(Number));}
     else{dl=Object.entries(dados).sort((a,b)=>Number(b[0])-Number(a[0])).filter(([,v])=>Array.isArray(v)&&v.length===6).map(([,v])=>v.map(Number));}
     anMega={dl,total:dl.length};
+    mostrarGraficos("mega");
     setS("mega","✓ "+dl.length+" concursos da Mega-Sena carregados.","i");
     bloq(_id("b-mega-o"),false);
   }catch(e){setS("mega","Erro: "+e.message,"e");}
@@ -726,10 +747,21 @@ window.baixarDupla=async()=>{
     const itens=Object.entries(dados).sort((a,b)=>Number(b[0])-Number(a[0])).filter(([,v])=>Array.isArray(v)&&v.length===12).map(([,v])=>v.map(Number));
     const{d1,d2}=sepDupla(itens);
     anDupla={d1,d2,total:d1.length};
+    mostrarGraficos("dupla");
     setS("dupla","✓ "+d1.length+" concursos da Dupla Sena carregados.","i");
     bloq(_id("b-dupla-o"),false);bloq(_id("b-dupla-8"),false);
   }catch(e){setS("dupla","Erro: "+e.message,"e");}
 };
+
+// ── GRAFICOS DE FREQUENCIA ──
+function mostrarGraficos(lot){
+  if(!window.Graficos)return;
+  try{
+    if(lot==="lf")Graficos.render(_id("lf-freq"),{sorteios:anLF.dl.map(d=>[d]),max:25,nome:"Lotofacil",chave:"lf"});
+    else if(lot==="mega")Graficos.render(_id("mega-freq"),{sorteios:anMega.dl.map(d=>[d]),max:60,nome:"Mega-Sena",chave:"mega"});
+    else Graficos.render(_id("dupla-freq"),{sorteios:anDupla.d1.map((d,i)=>[d,anDupla.d2[i]||[]]),max:50,nome:"Dupla Sena",chave:"dupla"});
+  }catch(e){console.warn("graficos",e);}
+}
 
 // ── GERACOES LF ──
 function precisaLF(prem){
