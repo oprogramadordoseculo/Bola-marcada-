@@ -1,0 +1,11 @@
+{
+  "name": "bola-marcada",
+  "private": true,
+  "description": "Raiz do repositorio: permite o Render rodar o servidor (pasta server/) com os comandos padrao.",
+  "scripts": {
+    "postinstall": "cd server && npm ci --omit=dev --no-audit --no-fund",
+    "build": "cd server && npm ci --omit=dev --no-audit --no-fund",
+    "start": "node server/index.js"
+  },
+  "engines": { "node": ">=20" }
+}
