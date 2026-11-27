@@ -17,11 +17,12 @@ service cloud.firestore {
       allow get: if dono(uid) || admin();
       allow list: if admin();
       allow create: if dono(uid)
+        && request.resource.data.keys().hasOnly(['premium', 'geracoesHoje', 'dataHoje', 'email', 'criadoEm'])
         && request.resource.data.premium == false
-        && !('premiumAte' in request.resource.data);
+        && request.resource.data.geracoesHoje == 0;
       allow update: if admin()
         || (dono(uid) && request.resource.data.diff(resource.data).affectedKeys()
-              .hasOnly(['geracoesHoje', 'dataHoje', 'email']));
+              .hasOnly(['email']));
       allow delete: if admin();
     }
 

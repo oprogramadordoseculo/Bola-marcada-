@@ -1,7 +1,7 @@
 # Configuracao do servidor no Render (plano gratis).
 services:
   - type: web
-    name: bola-marcada-api
+    name: bola-marcada
     runtime: node
     plan: free
     region: oregon

@@ -1,8 +1,8 @@
 // Service worker — 15 Pontos
 // Troque a VERSAO sempre que publicar mudanças no app, para os celulares pegarem a nova versão.
-const VERSAO = "v4";
+const VERSAO = "v6";
 const CACHE = "15pontos-" + VERSAO;
-const BASICO = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
+const BASICO = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./volante.js"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(BASICO)).then(() => self.skipWaiting()));
@@ -20,7 +20,8 @@ self.addEventListener("activate", (e) => {
 async function redePrimeiro(req) {
   const cache = await caches.open(CACHE);
   try {
-    const resp = await fetch(req);
+    // Paginas e dados: sempre confere se ha versao nova (ignora o cache do navegador).
+    const resp = await fetch(req, { cache: "no-cache" });
     if (resp.ok) cache.put(req, resp.clone());
     return resp;
   } catch (err) {
